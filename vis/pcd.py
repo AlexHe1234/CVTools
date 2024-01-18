@@ -61,6 +61,8 @@ class _Canvas(app.Canvas):
         
         self.color = color
 
+        self.init = True
+
     def on_draw(self, event):
         gloo.clear(color='black', depth=True)
         current_point_cloud = self.point_clouds[self.current_frame % len(self.point_clouds)]
@@ -73,6 +75,7 @@ class _Canvas(app.Canvas):
         self.program.draw('points')
 
     def on_resize(self, event):
+        if not hasattr(self, 'init'): return
         self.projection = perspective(45.0, event.size[0] / float(event.size[1]), 1.0, 100.0)
         self.program['projection'] = self.projection
 
