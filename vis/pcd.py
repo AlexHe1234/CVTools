@@ -41,6 +41,10 @@ class _Canvas(app.Canvas):
                             title='Interactive Point Clouds')
         self.program = gloo.Program(self.vertex_shader, self.fragment_shader)
         self.point_clouds = point_clouds  - np.mean(point_clouds.reshape(-1, 3), axis=0)
+
+        max_value = np.max(np.abs(self.point_clouds))
+        self.point_clouds *= 2. / max_value
+
         self.current_frame = 0
         sequence_speed = 1. / fps
         self.timer = app.Timer(interval=sequence_speed, connect=self.on_timer, start=True)
