@@ -64,7 +64,8 @@ class _Canvas(app.Canvas):
         self.wheel_pos = 0
         
         self.color = color
-        self.color_seq = len(self.color.shape) == 3
+        if not self.color is None:
+            self.color_seq = len(self.color.shape) == 3
 
         self.init = True
 
