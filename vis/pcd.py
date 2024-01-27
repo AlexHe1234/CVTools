@@ -33,8 +33,8 @@ class _Canvas(app.Canvas):
     
     def __init__(self, 
                  point_clouds,  # F, N, 3 
+                 color=None,  # N, 3 or F, N, 3
                  fps=24,
-                 color=None, 
                  point_size=5,
                  ):
         app.Canvas.__init__(self, keys='interactive', size=(800, 600),
@@ -64,6 +64,7 @@ class _Canvas(app.Canvas):
         self.wheel_pos = 0
         
         self.color = color
+        self.color_seq = len(self.color.shape) == 3
 
         self.init = True
 
@@ -72,7 +73,10 @@ class _Canvas(app.Canvas):
         current_point_cloud = self.point_clouds[self.current_frame % len(self.point_clouds)]
         self.program['position'] = current_point_cloud.astype(np.float32)
         if self.color is not None:
-            self.program['color_in'] = self.color.astype(np.float32)
+            if not self.color_seq:
+                self.program['color_in'] = self.color.astype(np.float32)
+            else:
+                self.program['color_in'] = self.color[self.current_frame % len(self.point_clouds)].astype(np.float32)
         else:
             self.program['color_in'] = np.ones_like(current_point_cloud).astype(np.float32)
         
