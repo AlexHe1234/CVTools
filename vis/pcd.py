@@ -73,7 +73,7 @@ class _Canvas(app.Canvas):
     def get_point_size(self):
         # return N floats
         num_points = len(self.point_clouds[self.current_frame])
-        if isinstance(self.point_size, float):
+        if isinstance(self.point_size, float) or isinstance(self.point_size, int):
             return np.ones(num_points) * self.point_size
         if not isinstance(self.point_size, np.ndarray):
             raise TypeError(f'Point sizes have type {type(self.point_size)} which is not supported')
