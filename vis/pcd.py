@@ -9,7 +9,7 @@ class _Canvas(app.Canvas):
     vertex_shader = """
     attribute vec3 position;
     attribute vec3 color_in;
-    attribute float radius_in;
+    attribute float radius;
 
     uniform mat4 model;
     uniform mat4 view;
@@ -19,7 +19,7 @@ class _Canvas(app.Canvas):
 
     void main() {
         gl_Position = projection * view * model * vec4(position, 1.0);
-        gl_PointSize = radius_in;
+        gl_PointSize = radius;
         color = color_in;
     }
     """
@@ -96,7 +96,7 @@ class _Canvas(app.Canvas):
         gloo.clear(color='black', depth=True)
         current_point_cloud = self.point_clouds[self.current_frame]
         self.program['position'] = current_point_cloud.astype(np.float32)
-        self.program['radius_in'] = self.get_point_size().astype(np.float32)
+        self.program['radius'] = self.get_point_size().astype(np.float32)
         self.program['color_in'] = self.get_point_color().astype(np.float32)
         self.program.draw('points')
 
