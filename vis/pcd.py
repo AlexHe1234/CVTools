@@ -9,16 +9,17 @@ class _Canvas(app.Canvas):
     vertex_shader = """
     attribute vec3 position;
     attribute vec3 color_in;
+    attribute float radius_in;
 
     uniform mat4 model;
     uniform mat4 view;
-    uniform int point_size;
     uniform mat4 projection;
+    
     varying vec3 color;
 
     void main() {
         gl_Position = projection * view * model * vec4(position, 1.0);
-        gl_PointSize = point_size;
+        gl_PointSize = radius_in;
         color = color_in;
     }
     """
@@ -32,10 +33,10 @@ class _Canvas(app.Canvas):
     """
     
     def __init__(self, 
-                 point_clouds,  # F, N, 3 
-                 color=None,  # N, 3 or F, N, 3
+                 point_clouds,  # (F, N, 3) 
+                 color=None,  # (N, 3) or (F, N, 3)
                  fps=24,
-                 point_size=5,
+                 point_size=5,  # float or (N,) or (F, N)
                  ):
         app.Canvas.__init__(self, keys='interactive', size=(800, 600),
                             title='Interactive Point Clouds')
@@ -57,7 +58,7 @@ class _Canvas(app.Canvas):
         self.program['model'] = self.model
         self.program['view'] = self.view
         self.program['projection'] = self.projection
-        self.program['point_size'] = point_size
+        self.point_size = point_size
 
         self.theta, self.phi = 0, 0
         self.mouse_pos = 0, 0
@@ -69,18 +70,34 @@ class _Canvas(app.Canvas):
 
         self.init = True
 
-    def on_draw(self, event):
-        gloo.clear(color='black', depth=True)
-        current_point_cloud = self.point_clouds[self.current_frame % len(self.point_clouds)]
-        self.program['position'] = current_point_cloud.astype(np.float32)
+    def get_point_size(self):
+        # return N floats
+        num_points = len(self.point_clouds[self.current_frame])
+        if isinstance(self.point_size, float):
+            return np.ones(num_points) * self.point_size
+        if not isinstance(self.point_size, np.ndarray):
+            raise TypeError(f'Point sizes have type {type(self.point_size)} which is not supported')
+        if len(self.point_size.shape) == 1:
+            return self.point_size
+        if len(self.point_size.shape) == 2:
+            return self.point_size[self.current_frame]
+        raise ValueError(f'Point sizes array have shape {self.point_size.shape} which is not supported (and weird also)')
+    
+    def get_point_color(self):
         if self.color is not None:
             if not self.color_seq:
-                self.program['color_in'] = self.color.astype(np.float32)
+                return self.color
             else:
-                self.program['color_in'] = self.color[self.current_frame % len(self.point_clouds)].astype(np.float32)
+                return self.color[self.current_frame]
         else:
-            self.program['color_in'] = np.ones_like(current_point_cloud).astype(np.float32)
-        
+            return np.ones_like(self.point_clouds[self.current_frame])
+
+    def on_draw(self, event):
+        gloo.clear(color='black', depth=True)
+        current_point_cloud = self.point_clouds[self.current_frame]
+        self.program['position'] = current_point_cloud.astype(np.float32)
+        self.program['radius_in'] = self.get_point_size().astype(np.float32)
+        self.program['color_in'] = self.get_point_color().astype(np.float32)
         self.program.draw('points')
 
     def on_resize(self, event):
@@ -109,6 +126,7 @@ class _Canvas(app.Canvas):
 
     def on_timer(self, event):
         self.current_frame += 1
+        self.current_frame %= len(self.point_clouds)
         self.update()
         
         
@@ -139,10 +157,13 @@ def demo(num_points=1000,
     rand_diff = (np.random.rand(frames, num_points, 3) - 0.5) * 2. / frames
     traj = np.cumsum(rand_diff, axis=0)  # F, N, 3
     point_clouds_sequence = pcd_init + traj
+    point_size = np.arange(frames) / frames * 5 + 5.
+    point_size = np.stack([point_size] * num_points).transpose()
 
     play(point_clouds_sequence, 
          fps=24, 
-         color=generate_gradient_color(pcd_init[0, :, 2]))
+         color=generate_gradient_color(pcd_init[0, :, 2]),
+         point_size=point_size)
     
 
 def demo_static(num_points=1000):
